@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/app: netwin-loadbalancer
+    app.kubernetes.io/component: loadbalancer
+    app.kubernetes.io/instance: netwin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: loadbalancer
+    app.kubernetes.io/version: 1.0.7-r1
+    helm.sh/chart: netwin-0.1.0
+  name: netwin-loadbalancer
+  namespace: nossis-netwin-dev-hml
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/app: netwin-loadbalancer
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/app: netwin-loadbalancer
+        app.kubernetes.io/component: loadbalancer
+        app.kubernetes.io/instance: netwin
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: loadbalancer
+        app.kubernetes.io/version: 1.0.7-r1
+        helm.sh/chart: netwin-0.1.0
+    spec:
+      containers:
+      - args:
+        - netwin_lb_fe
+        envFrom:
+        - secretRef:
+            name: netwin-credentials
+        image: ghcr.io/alticelabsprojects/inventory-vtal-lb:1.0.7-r1
+        imagePullPolicy: Always
+        name: netwin-loadbalancer
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 9113
+          name: prom-metrics
+          protocol: TCP
+        resources:
+          limits:
+            cpu: '1'
+            memory: 1Gi
+          requests:
+            cpu: 200m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsNonRoot: true
+        volumeMounts:
+        - mountPath: /opt/alticelabs/automation/netwin/inventory/hosts
+          name: deploy-conf
+          subPath: hosts
+        - mountPath: /opt/alticelabs/automation/netwin/certs/tls.crt
+          name: vtal-cert
+          subPath: tls.crt
+        - mountPath: /opt/alticelabs/automation/netwin/certs/tls.key
+          name: vtal-cert
+          subPath: tls.key
+      securityContext:
+        runAsGroup: 998
+        runAsUser: 999
+      serviceAccountName: sa-nossis
+      volumes:
+      - configMap:
+          name: netwin-deploy-conf
+        name: deploy-conf
+      - name: vtal-cert
+        secret:
+          items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+          secretName: netwin-nprd-tls

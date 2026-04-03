@@ -1,0 +1,47 @@
+# ==============================================================================
+#   Arquivo   : dev-interno.yaml
+#   Versao    : 1.0.0
+#   Autor     : Diego Regis M. F. dos Santos
+#   Email     : diego-f-santos@openlabs.com.br
+#   Time      : OpenLabs - DevOps | Infra
+#   Desc      : Configuracao do ambiente DEV-INTERNO para o orquestrador Netwin.
+#               Define cluster Rancher/RKE2, namespace, registry, banco Oracle
+#               e replicas para startup automatico.
+#               Todos os componentes sobem com 1 replica.
+#               Docmanager nao e iniciado no modo automatico.
+#   Ambiente  : dev-interno
+#   Namespace : netwin
+#
+#   Historico :
+#     1.0.0  2026-04-01  Criacao inicial
+# ==============================================================================
+
+name: dev-interno
+label: DEV-INTERNO
+cluster:
+  type: rancher
+  host: ''
+  context: ''
+namespace: netwin
+registry: ghcr.io/alticelabsprojects
+database:
+  host: ''
+  port: 1521
+  service: ''
+  user: 'NETWIN_SOL'
+  password: 'NETWIN_SOL'
+manifests_dir: manifests/dev-interno
+startup:
+  defaults:
+    replicas: 1
+  components:
+    netwin-loadbalancer-be: 1
+    netwin-loadbalancer: 1
+    netwin-wildfly: 1
+    netwin-wildfly-feas: 1
+    netwin-wildfly-prov: 1
+    netwin-backend: 1
+    netwin-geoserver: 1
+    netwin-tomcat: 1
+    netwin-tomcat-prov: 1
+    netwin-frontend: 1

@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/app: netwin-loadbalancer-be
+    app.kubernetes.io/component: loadbalancer
+    app.kubernetes.io/instance: netwin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: loadbalancer-be
+    app.kubernetes.io/version: 1.0.7-r1
+    helm.sh/chart: netwin-0.1.0
+  name: netwin-loadbalancer-be
+  namespace: nossis-netwin-dev-hml
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/app: netwin-loadbalancer-be
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/app: netwin-loadbalancer-be
+        app.kubernetes.io/component: loadbalancer
+        app.kubernetes.io/instance: netwin
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: loadbalancer-be
+        app.kubernetes.io/version: 1.0.7-r1
+        helm.sh/chart: netwin-0.1.0
+    spec:
+      containers:
+      - args:
+        - netwin_lb_be
+        envFrom:
+        - secretRef:
+            name: netwin-credentials
+        image: ghcr.io/alticelabsprojects/inventory-vtal-lb:1.0.7-r1
+        imagePullPolicy: Always
+        name: netwin-loadbalancer-be
+        ports:
+        - containerPort: 9113
+          name: prom-metrics
+          protocol: TCP
+        - containerPort: 8089
+          name: be-lb-http
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 1500m
+            memory: 2Gi
+          requests:
+            cpu: 500m
+            memory: 128Mi
+        securityContext:
+          runAsNonRoot: true
+        volumeMounts:
+        - mountPath: /opt/alticelabs/automation/netwin/inventory/hosts
+          name: deploy-conf
+          subPath: hosts
+      securityContext:
+        runAsGroup: 998
+        runAsUser: 999
+      serviceAccountName: sa-nossis
+      volumes:
+      - configMap:
+          name: netwin-deploy-conf
+        name: deploy-conf

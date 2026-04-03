@@ -1,0 +1,148 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/app: netwin-backend
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/instance: netwin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/version: 1.0.7-r1
+    helm.sh/chart: netwin-0.1.0
+  name: netwin-backend
+  namespace: nossis-netwin-dev-hml
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/app: netwin-backend
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        openshift.openshift.io/restartedAt: '2025-12-01T14:13:54.322Z'
+      labels:
+        app.kubernetes.io/app: netwin-backend
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/instance: netwin
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: backend
+        app.kubernetes.io/version: 1.0.7-r1
+        helm.sh/chart: netwin-0.1.0
+    spec:
+      containers:
+      - args:
+        - netwin_backend
+        env:
+        - name: JBOSS_HTTPS_PORT
+          value: '443'
+        envFrom:
+        - secretRef:
+            name: netwin-credentials
+        image: ghcr.io/alticelabsprojects/inventory-vtal:1.0.7-r1
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /health/live
+            port: 9015
+            scheme: HTTP
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: netwin-backend
+        ports:
+        - containerPort: 9015
+          name: http
+          protocol: TCP
+        - containerPort: 9016
+          name: http-debug
+          protocol: TCP
+        - containerPort: 8891
+          name: prom-metrics
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /health/ready
+            port: 9015
+            scheme: HTTP
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: '4'
+            memory: 8Gi
+          requests:
+            cpu: '1'
+            memory: 4Gi
+        securityContext:
+          runAsNonRoot: true
+        volumeMounts:
+        - mountPath: /opt/alticelabs/automation/netwin/inventory/hosts
+          name: deploy-conf
+          subPath: hosts
+        - mountPath: /var/log
+          name: varlog
+        - mountPath: /opt/alticelabs/automation/netwin/certs/tls.crt
+          name: vtal-cert
+          subPath: tls.crt
+        - mountPath: /opt/alticelabs/automation/netwin/certs/tls.key
+          name: vtal-cert
+          subPath: tls.key
+        - mountPath: /opt/alticelabs/automation/netwin/certs/vtal-ca.crt
+          name: vtal-ca
+          subPath: vtal-ca.crt
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - cp -rp /var/log/* /tmp/log
+        image: ghcr.io/alticelabsprojects/inventory-vtal:1.0.7-r1
+        imagePullPolicy: Always
+        name: init-log-dir
+        resources:
+          limits:
+            cpu: 75m
+            memory: 100Mi
+          requests:
+            cpu: 50m
+            memory: 100Mi
+        securityContext:
+          runAsNonRoot: true
+        volumeMounts:
+        - mountPath: /tmp/log
+          name: varlog
+      securityContext:
+        runAsGroup: 1009
+        runAsUser: 992
+      serviceAccountName: sa-nossis
+      volumes:
+      - configMap:
+          name: netwin-deploy-conf
+        name: deploy-conf
+      - emptyDir: {}
+        name: varlog
+      - name: vtal-cert
+        secret:
+          items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+          secretName: netwin-nprd-tls
+      - name: vtal-ca
+        secret:
+          items:
+          - key: vtal-ca.crt
+            path: vtal-ca.crt
+          secretName: vtal-ca-tls

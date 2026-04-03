@@ -1,0 +1,69 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: netwin-db-migrate
+  namespace: netwin
+  labels:
+    app.kubernetes.io/app: netwin-db-migrate
+    app.kubernetes.io/component: db-migrate
+    helm.sh/chart: netwin-0.1.0
+    app.kubernetes.io/version: 1.0.7-r1
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: netwin
+spec:
+  completions: 1
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/app: netwin-db-migrate
+        app.kubernetes.io/component: db-install
+        helm.sh/chart: netwin-0.1.0
+        app.kubernetes.io/version: 1.0.7-r1
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/instance: netwin
+    spec:
+      imagePullSecrets:
+      - name: ghcr-secret
+      restartPolicy: Never
+      securityContext:
+        runAsGroup: 1009
+        runAsUser: 992
+      serviceAccountName: sa-nossis
+      containers:
+      - name: migrate-db
+        image: ghcr.io/alticelabsprojects/inventory-vtal:1.0.7-r1
+        imagePullPolicy: Always
+        args:
+        - netwin_migrate
+        resources:
+          limits:
+            cpu: '1'
+            memory: 2Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+        envFrom:
+        - secretRef:
+            name: netwin-credentials
+        volumeMounts:
+        - name: deploy-conf
+          mountPath: /opt/alticelabs/automation/netwin/inventory/hosts
+          subPath: hosts
+        - name: varlog
+          mountPath: /var/log
+        - name: vtal-ca
+          mountPath: /opt/alticelabs/automation/netwin/certs/ca.crt
+          subPath: ca.crt
+      volumes:
+      - name: deploy-conf
+        configMap:
+          name: netwin-deploy-conf
+      - name: varlog
+        emptyDir: {}
+      - name: vtal-ca
+        secret:
+          secretName: vtal-ca
+          items:
+          - key: ca.crt
+            path: ca.crt

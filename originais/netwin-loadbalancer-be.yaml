@@ -1,0 +1,125 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "11"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app.kubernetes.io/app":"netwin-loadbalancer-be","app.kubernetes.io/component":"loadbalancer","app.kubernetes.io/instance":"netwin","app.kubernetes.io/managed-by":"Helm","app.kubernetes.io/name":"loadbalancer-be","app.kubernetes.io/version":"1.0.5-r3","helm.sh/chart":"netwin-0.1.0"},"name":"netwin-loadbalancer-be","namespace":"netwin"},"spec":{"replicas":1,"selector":{"matchLabels":{"app.kubernetes.io/app":"netwin-loadbalancer-be"}},"template":{"metadata":{"labels":{"app.kubernetes.io/app":"netwin-loadbalancer-be","app.kubernetes.io/component":"loadbalancer","app.kubernetes.io/instance":"netwin","app.kubernetes.io/managed-by":"Helm","app.kubernetes.io/name":"loadbalancer-be","app.kubernetes.io/version":"1.0.5-r3","helm.sh/chart":"netwin-0.1.0"}},"spec":{"containers":[{"args":["netwin_lb_be"],"envFrom":[{"secretRef":{"name":"netwin-credentials"}}],"image":"acrdevopsfbdev2demo.azurecr.io/netwin/inventory-vtal-lb:1.0.5-r3","imagePullPolicy":"Always","name":"netwin-loadbalancer-be","ports":[{"containerPort":9113,"name":"prom-metrics"},{"containerPort":8089,"name":"be-lb-http"}],"resources":{"limits":{"cpu":"1500m","memory":"2Gi"},"requests":{"cpu":"100m","memory":"128Mi"}},"securityContext":{"runAsNonRoot":true},"volumeMounts":[{"mountPath":"/opt/alticelabs/automation/netwin/inventory/hosts","name":"deploy-conf","subPath":"hosts"},{"mountPath":"/opt/alticelabs/automation/netwin/certs/tls.crt","name":"nginx-cert","subPath":"tls.crt"},{"mountPath":"/opt/alticelabs/automation/netwin/certs/tls.key","name":"nginx-cert","subPath":"tls.key"}]}],"securityContext":{"runAsGroup":998,"runAsUser":999},"serviceAccountName":"default","volumes":[{"configMap":{"name":"netwin-deploy-conf"},"name":"deploy-conf"},{"name":"nginx-cert","secret":{"items":[{"key":"tls.crt","path":"tls.crt"},{"key":"tls.key","path":"tls.key"}],"secretName":"loadbalancer-crt"}}]}}}}
+  creationTimestamp: "2025-12-22T15:12:48Z"
+  generation: 29
+  labels:
+    app.kubernetes.io/app: netwin-loadbalancer-be
+    app.kubernetes.io/component: loadbalancer
+    app.kubernetes.io/instance: netwin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: loadbalancer-be
+    app.kubernetes.io/version: 1.0.5-r3
+    helm.sh/chart: netwin-0.1.0
+  name: netwin-loadbalancer-be
+  namespace: netwin
+  resourceVersion: "204541959"
+  uid: 620045b0-72b5-4694-9fbc-f9e0ac412384
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/app: netwin-loadbalancer-be
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "2026-02-12T16:46:40-03:00"
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/app: netwin-loadbalancer-be
+        app.kubernetes.io/component: loadbalancer
+        app.kubernetes.io/instance: netwin
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: loadbalancer-be
+        app.kubernetes.io/version: 1.0.5-r3
+        helm.sh/chart: netwin-0.1.0
+    spec:
+      containers:
+      - args:
+        - netwin_lb_be
+        envFrom:
+        - secretRef:
+            name: netwin-credentials
+        image: ghcr.io/alticelabsprojects/inventory-vtal-lb:1.0.6-r2
+        imagePullPolicy: Always
+        name: netwin-loadbalancer-be
+        ports:
+        - containerPort: 9113
+          name: prom-metrics
+          protocol: TCP
+        - containerPort: 8089
+          name: be-lb-http
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          runAsNonRoot: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/alticelabs/automation/netwin/inventory/hosts
+          name: deploy-conf
+          subPath: hosts
+        - mountPath: /opt/alticelabs/automation/netwin/certs/tls.crt
+          name: nginx-cert
+          subPath: tls.crt
+        - mountPath: /opt/alticelabs/automation/netwin/certs/tls.key
+          name: nginx-cert
+          subPath: tls.key
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: acr-secret
+      - name: ghcr-secret
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsGroup: 998
+        runAsUser: 999
+      serviceAccount: default
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: netwin-deploy-conf
+        name: deploy-conf
+      - name: nginx-cert
+        secret:
+          defaultMode: 420
+          items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+          secretName: netwin-web-certificate
+status:
+  conditions:
+  - lastTransitionTime: "2026-03-25T03:52:40Z"
+    lastUpdateTime: "2026-03-25T03:52:40Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2025-12-22T15:12:48Z"
+    lastUpdateTime: "2026-03-25T03:52:40Z"
+    message: ReplicaSet "netwin-loadbalancer-be-6645cb544b" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  observedGeneration: 29

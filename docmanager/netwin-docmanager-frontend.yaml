@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/app: netwin-docmanager-frontend
+    app.kubernetes.io/component: docmanager-backend
+    app.kubernetes.io/instance: netwin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: netwin-docmanager-frontend
+    app.kubernetes.io/version: 1.0.4-r1
+    helm.sh/chart: netwin-0.1.0
+  name: netwin-docmanager-frontend
+  namespace: netwin
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/app: netwin-docmanager-frontend
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/app: netwin-docmanager-frontend
+        app.kubernetes.io/component: docmanager-frontend
+        app.kubernetes.io/instance: netwin
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: netwin-docmanager-frontend
+        app.kubernetes.io/version: 1.0.4-r1
+        helm.sh/chart: netwin-0.1.0
+    spec:
+      containers:
+      - envFrom:
+        - secretRef:
+            name: netwin-credentials
+        image: acrdevopsfbdev2demo.azurecr.io/netwin/nossis-docmanager-frontend-nginx:2.1.0-r202510211325
+        imagePullPolicy: Always
+        name: nginx-service
+        ports:
+        - containerPort: 443
+          name: public
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 200m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 512Mi
+      - envFrom:
+        - secretRef:
+            name: netwin-credentials
+        image: acrdevopsfbdev2demo.azurecr.io/netwin/nossis-docmanager-frontend:2.1.0-r202510211325
+        imagePullPolicy: Always
+        name: java-service
+        ports:
+        - containerPort: 9000
+          name: public
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 1Gi
+        volumeMounts:
+        - mountPath: /opt/alticelabs/docmanager/bin/configuratorweb.properties
+          name: netwin-docmanager-frontend-configuration
+          subPath: configuratorweb.properties
+      securityContext: {}
+      serviceAccountName: default
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: configuratorweb.properties
+            path: configuratorweb.properties
+          name: netwin-docmanager-frontend-configuration
+        name: netwin-docmanager-frontend-configuration

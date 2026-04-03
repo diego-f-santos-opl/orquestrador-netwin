@@ -1,0 +1,176 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "15"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app.kubernetes.io/app":"netwin-frontend","app.kubernetes.io/component":"frontend","app.kubernetes.io/instance":"netwin","app.kubernetes.io/managed-by":"Helm","app.kubernetes.io/name":"frontend","app.kubernetes.io/version":"1.0.5-r3","helm.sh/chart":"netwin-0.1.0"},"name":"netwin-frontend","namespace":"netwin"},"spec":{"progressDeadlineSeconds":600,"replicas":1,"revisionHistoryLimit":10,"selector":{"matchLabels":{"app.kubernetes.io/app":"netwin-frontend"}},"strategy":{"rollingUpdate":{"maxSurge":"25%","maxUnavailable":"25%"},"type":"RollingUpdate"},"template":{"metadata":{"labels":{"app.kubernetes.io/app":"netwin-frontend","app.kubernetes.io/component":"frontend","app.kubernetes.io/instance":"netwin","app.kubernetes.io/managed-by":"Helm","app.kubernetes.io/name":"frontend","app.kubernetes.io/version":"1.0.5-r3","helm.sh/chart":"netwin-0.1.0"}},"spec":{"containers":[{"args":["netwin_frontend"],"env":[{"name":"IAM_URL","value":"https://iam-dev-vtal.10.51.195.98.nip.io"}],"envFrom":[{"secretRef":{"name":"netwin-credentials"}}],"image":"acrdevopsfbdev2demo.azurecr.io/netwin/inventory-vtal:1.0.5-r3","imagePullPolicy":"Always","livenessProbe":{"failureThreshold":3,"httpGet":{"path":"/health/live","port":9500,"scheme":"HTTP"},"initialDelaySeconds":150,"periodSeconds":30,"timeoutSeconds":1},"name":"netwin-frontend","ports":[{"containerPort":9500,"name":"http"},{"containerPort":40002,"name":"securitycache"},{"containerPort":9021,"name":"debug"},{"containerPort":8886,"name":"prom-metrics"}],"readinessProbe":{"failureThreshold":3,"httpGet":{"path":"/health/ready","port":9500,"scheme":"HTTP"},"initialDelaySeconds":150,"periodSeconds":30,"timeoutSeconds":5},"resources":{"limits":{"cpu":"2","memory":"4Gi"},"requests":{"cpu":"200m","memory":"1Gi"}},"securityContext":{"allowPrivilegeEscalation":false,"runAsNonRoot":true},"volumeMounts":[{"mountPath":"/opt/alticelabs/automation/netwin/inventory/hosts","name":"deploy-conf","subPath":"hosts"},{"mountPath":"/tmp/log","name":"varlog"},{"mountPath":"/opt/alticelabs/automation/netwin/iamcerts/tls.crt","name":"vtal-cert","subPath":"tls.crt"},{"mountPath":"/opt/alticelabs/automation/netwin/iamcerts/tls.key","name":"vtal-cert","subPath":"tls.key"},{"mountPath":"/opt/alticelabs/automation/netwin/iamcerts/vtal-ca.crt","name":"vtal-ca","subPath":"vtal-ca.crt"}]}],"imagePullSecrets":[{"name":"acr-secret"}],"initContainers":[{"command":["sh","-c","cp -rp /var/log/* /tmp/log || true"],"image":"acrdevopsfbdev2demo.azurecr.io/netwin/inventory-vtal:1.0.5-r3","imagePullPolicy":"Always","name":"init-log-dir","resources":{"limits":{"cpu":"100m","memory":"100Mi"},"requests":{"cpu":"50m","memory":"100Mi"}},"securityContext":{"runAsNonRoot":true},"volumeMounts":[{"mountPath":"/tmp/log","name":"varlog"}]}],"securityContext":{"runAsGroup":1009,"runAsUser":992},"serviceAccountName":"sa-nossis","volumes":[{"configMap":{"name":"netwin-deploy-conf"},"name":"deploy-conf"},{"emptyDir":{},"name":"varlog"},{"name":"vtal-cert","secret":{"defaultMode":420,"items":[{"key":"tls.crt","path":"tls.crt"},{"key":"tls.key","path":"tls.key"}],"secretName":"netwin-web-certificate"}},{"name":"vtal-ca","secret":{"items":[{"key":"ca.crt","path":"vtal-ca.crt"}],"secretName":"vtal-ca"}}]}}}}
+  creationTimestamp: "2025-12-22T15:12:48Z"
+  generation: 33
+  labels:
+    app.kubernetes.io/app: netwin-frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/instance: netwin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/version: 1.0.5-r3
+    helm.sh/chart: netwin-0.1.0
+  name: netwin-frontend
+  namespace: netwin
+  resourceVersion: "204541923"
+  uid: e226543b-1fb1-48c1-a752-0ccecdd3efd0
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/app: netwin-frontend
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "2026-02-24T15:38:37-03:00"
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/app: netwin-frontend
+        app.kubernetes.io/component: frontend
+        app.kubernetes.io/instance: netwin
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: frontend
+        app.kubernetes.io/version: 1.0.5-r3
+        helm.sh/chart: netwin-0.1.0
+    spec:
+      containers:
+      - args:
+        - netwin_frontend
+        env:
+        - name: IAM_URL
+          value: https://iam-dev-vtal.10.51.195.98.nip.io
+        envFrom:
+        - secretRef:
+            name: netwin-credentials
+        image: ghcr.io/alticelabsprojects/inventory-vtal:1.0.6-r2
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/live
+            port: 9500
+            scheme: HTTP
+          initialDelaySeconds: 150
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: netwin-frontend
+        ports:
+        - containerPort: 9500
+          name: http
+          protocol: TCP
+        - containerPort: 40002
+          name: securitycache
+          protocol: TCP
+        - containerPort: 9021
+          name: debug
+          protocol: TCP
+        - containerPort: 8886
+          name: prom-metrics
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/ready
+            port: 9500
+            scheme: HTTP
+          initialDelaySeconds: 150
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: "2"
+            memory: 4Gi
+          requests:
+            cpu: 200m
+            memory: 1Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/alticelabs/automation/netwin/inventory/hosts
+          name: deploy-conf
+          subPath: hosts
+        - mountPath: /tmp/log
+          name: varlog
+        - mountPath: /opt/alticelabs/automation/netwin/iamcerts/ca.crt
+          name: altice-ca
+          subPath: ca.crt
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: acr-secret
+      - name: ghcr-secret
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - cp -rp /var/log/* /tmp/log || true
+        image: acrdevopsfbdev2demo.azurecr.io/netwin/inventory-vtal:1.0.5-r3
+        imagePullPolicy: Always
+        name: init-log-dir
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 50m
+            memory: 100Mi
+        securityContext:
+          runAsNonRoot: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /tmp/log
+          name: varlog
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsGroup: 1009
+        runAsUser: 992
+      serviceAccount: sa-nossis
+      serviceAccountName: sa-nossis
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: netwin-deploy-conf
+        name: deploy-conf
+      - emptyDir: {}
+        name: varlog
+      - name: altice-ca
+        secret:
+          defaultMode: 420
+          items:
+          - key: ca.crt
+            path: ca.crt
+          secretName: netwin-web-certificate
+status:
+  conditions:
+  - lastTransitionTime: "2026-03-25T03:55:51Z"
+    lastUpdateTime: "2026-03-25T03:55:51Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2025-12-22T15:12:48Z"
+    lastUpdateTime: "2026-03-25T03:55:52Z"
+    message: ReplicaSet "netwin-frontend-6f454dc88f" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  observedGeneration: 33

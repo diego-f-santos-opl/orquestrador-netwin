@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/app: netwin-docmanager-frontend
+    app.kubernetes.io/component: docmanager-backend
+    app.kubernetes.io/instance: netwin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: netwin-docmanager-frontend
+    app.kubernetes.io/version: 1.0.2
+    helm.sh/chart: netwin-0.1.0
+  name: netwin-docmanager-frontend
+  namespace: nossis-netwin-dev-hml
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/app: netwin-docmanager-frontend
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/app: netwin-docmanager-frontend
+        app.kubernetes.io/component: docmanager-frontend
+        app.kubernetes.io/instance: netwin
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: netwin-docmanager-frontend
+        app.kubernetes.io/version: 1.0.2
+        helm.sh/chart: netwin-0.1.0
+    spec:
+      containers:
+      - envFrom:
+        - secretRef:
+            name: netwin-credentials
+        image: ghcr.io/alticelabsprojects/nossis-docmanager-public/nossis-docmanager/nossis-docmanager-frontend-nginx:2.1.0-r202510211325
+        imagePullPolicy: Always
+        name: docmanager-fe-nginx-service
+        ports:
+        - containerPort: 8080
+          name: public
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 200m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 512Mi
+        securityContext:
+          runAsGroup: 0
+      - envFrom:
+        - secretRef:
+            name: netwin-credentials
+        image: ghcr.io/alticelabsprojects/nossis-docmanager-public/nossis-docmanager/nossis-docmanager-frontend:2.1.0-r202510211325
+        imagePullPolicy: Always
+        name: docmanager-fe-service
+        ports:
+        - containerPort: 9000
+          name: http
+          protocol: TCP
+        - containerPort: 5006
+          name: http-debug
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 1Gi
+        securityContext:
+          runAsUser: 1982
+        volumeMounts:
+        - mountPath: /opt/alticelabs/docmanager/bin/configuratorweb.properties
+          name: netwin-docmanager-frontend-configuration
+          subPath: configuratorweb.properties
+        - mountPath: /opt/alticelabs/docmanager/conf/frontend/keystore
+          name: iam-docmanager-jks
+      initContainers:
+      - command:
+        - /bin/bash
+        - -c
+        - 'cp /etc/pki/ca-trust/extracted/java/cacerts /opt/alticelabs/docmanager/conf/frontend/keystore/iam-docmanager.jks
+          && \
+
+          chmod 644 /opt/alticelabs/docmanager/conf/frontend/keystore/iam-docmanager.jks
+          && \
+
+          openssl s_client -showcerts -connect ${IAM_HOST}:443 -servername ${IAM_HOST}
+          </dev/null 2>/dev/null | openssl x509 -outform PEM > /tmp/iam-certfile.pem
+          && \
+
+          keytool -noprompt -keystore ${CACERTS} -import -alias iam -file /tmp/iam-certfile.pem
+          -storepass changeit
+
+          '
+        env:
+        - name: IAM_HOST
+          value: iam-nossis-dev.apps.ocparc-nprd.vtal.intra
+        - name: CACERTS
+          value: /opt/alticelabs/docmanager/conf/frontend/keystore/iam-docmanager.jks
+        image: ghcr.io/alticelabsprojects/nossis-docmanager-public/nossis-docmanager/nossis-docmanager-frontend:2.1.0-r202510211325
+        imagePullPolicy: Always
+        name: import-cert
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        securityContext:
+          runAsUser: 1982
+        volumeMounts:
+        - mountPath: /opt/alticelabs/docmanager/conf/frontend/keystore
+          name: iam-docmanager-jks
+      securityContext:
+        runAsGroup: 1982
+        runAsUser: 1982
+      serviceAccountName: sa-nossis
+      volumes:
+      - configMap:
+          items:
+          - key: configuratorweb.properties
+            path: configuratorweb.properties
+          name: netwin-docmanager-frontend-configuration
+        name: netwin-docmanager-frontend-configuration
+      - emptyDir: {}
+        name: iam-docmanager-jks

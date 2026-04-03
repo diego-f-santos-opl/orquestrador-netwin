@@ -1,0 +1,48 @@
+# ==============================================================================
+#   Arquivo   : hml-dev.yaml
+#   Versao    : 1.0.0
+#   Autor     : Diego Regis M. F. dos Santos
+#   Email     : diego-f-santos@openlabs.com.br
+#   Time      : OpenLabs - DevOps | Infra
+#   Desc      : Configuracao do ambiente HML-DEV para o orquestrador Netwin.
+#               Define cluster OpenShift, namespace, registry, banco Oracle
+#               e replicas para startup automatico.
+#   Ambiente  : hml-dev
+#   Namespace : nossis-netwin-dev-hml
+#   Cluster   : api-ocparc-nprd-vtal-intra:6443
+#
+#   Historico :
+#     1.0.0  2026-04-01  Criacao inicial
+# ==============================================================================
+
+name: hml-dev
+label: HML-DEV
+cluster:
+  type: openshift
+  host: '10.101.37.140'
+  context: 'nossis-netwin-dev-hml/api-ocparc-nprd-vtal-intra:6443/TT811443'
+namespace: nossis-netwin-dev-hml
+registry: ghcr.io/alticelabsprojects
+database:
+  host: '10.101.37.140'
+  port: 1549
+  service: 'nossdev1'
+  user: 'NETWIN_SOL'
+  password: 'NETWIN_SOL'
+manifests_dir: manifests/hml-dev
+startup:
+  defaults:
+    replicas: 1
+  components:
+    netwin-loadbalancer-be: 2
+    netwin-loadbalancer: 2
+    netwin-wildfly: 2
+    netwin-wildfly-feas: 1
+    netwin-wildfly-prov: 1
+    netwin-backend: 2
+    netwin-geoserver: 2
+    netwin-tomcat: 2
+    netwin-tomcat-prov: 1
+    netwin-frontend: 2
+    netwin-docmanager-backend: 1
+    netwin-docmanager-frontend: 1

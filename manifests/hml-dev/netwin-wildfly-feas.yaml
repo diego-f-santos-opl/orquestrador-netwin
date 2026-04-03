@@ -1,0 +1,180 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/app: netwin-wildfly-feas
+    app.kubernetes.io/component: wildfly-feas
+    app.kubernetes.io/instance: netwin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: netwin-wildfly-feas
+    app.kubernetes.io/version: 1.0.7-r1
+    helm.sh/chart: netwin-0.1.0
+  name: netwin-wildfly-feas
+  namespace: nossis-netwin-dev-hml
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/app: netwin-wildfly-feas
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/app: netwin-wildfly-feas
+        app.kubernetes.io/component: wildfly-feas
+        app.kubernetes.io/instance: netwin
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: netwin-wildfly-feas
+        app.kubernetes.io/version: 1.0.7-r1
+        helm.sh/chart: netwin-0.1.0
+    spec:
+      containers:
+      - args:
+        - netwin_wildfly
+        envFrom:
+        - secretRef:
+            name: netwin-credentials
+        image: ghcr.io/alticelabsprojects/inventory-vtal:1.0.7-r1
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/live
+            port: 10190
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: netwin-wildfly-feas
+        ports:
+        - containerPort: 1299
+          name: http1
+          protocol: TCP
+        - containerPort: 2181
+          name: http2
+          protocol: TCP
+        - containerPort: 8280
+          name: http3
+          protocol: TCP
+        - containerPort: 8787
+          name: http4
+          protocol: TCP
+        - containerPort: 10190
+          name: http6
+          protocol: TCP
+        - containerPort: 8890
+          name: prom-metrics
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/ready
+            port: 10190
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: '2'
+            memory: 4Gi
+          requests:
+            cpu: 300m
+            memory: 1Gi
+        securityContext:
+          runAsNonRoot: true
+        volumeMounts:
+        - mountPath: /opt/alticelabs/automation/netwin/inventory/hosts
+          name: deploy-conf
+          subPath: hosts
+        - mountPath: /var/log
+          name: varlog
+        - mountPath: /opt/alticelabs/automation/netwin/certs/
+          name: vtal-cert
+        - mountPath: /opt/alticelabs/automation/netwin/eicerts/tls.crt
+          name: vtal-cert
+          subPath: tls.crt
+        - mountPath: /opt/alticelabs/automation/netwin/eicerts/tls.key
+          name: vtal-cert
+          subPath: tls.key
+        - mountPath: /opt/alticelabs/automation/netwin/eicerts/vtal-ca.crt
+          name: vtal-ca
+          subPath: vtal-ca.crt
+      - command:
+        - sh
+        - -c
+        - rsyslogd -n
+        image: ghcr.io/alticelabsprojects/inventory-vtal:1.0.7-r1
+        imagePullPolicy: Always
+        name: rsyslog
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 50m
+            memory: 100Mi
+        volumeMounts:
+        - mountPath: /var/log
+          name: varlog
+        - mountPath: /etc/rsyslog.conf
+          name: rsyslogconf
+          subPath: rsyslog.conf
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - cp -rp /var/log/* /tmp/log
+        image: ghcr.io/alticelabsprojects/inventory-vtal:1.0.7-r1
+        imagePullPolicy: Always
+        name: init-log-dir
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 50m
+            memory: 100Mi
+        securityContext:
+          runAsNonRoot: true
+        volumeMounts:
+        - mountPath: /tmp/log
+          name: varlog
+      securityContext:
+        runAsGroup: 1009
+        runAsUser: 992
+      serviceAccountName: sa-nossis
+      volumes:
+      - configMap:
+          name: netwin-deploy-conf
+        name: deploy-conf
+      - emptyDir: {}
+        name: varlog
+      - configMap:
+          items:
+          - key: rsyslog.conf
+            path: rsyslog.conf
+          name: rsyslog-conf
+        name: rsyslogconf
+      - name: vtal-cert
+        secret:
+          items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+          secretName: netwin-nprd-tls
+      - name: vtal-ca
+        secret:
+          items:
+          - key: vtal-ca.crt
+            path: vtal-ca.crt
+          secretName: vtal-ca-tls

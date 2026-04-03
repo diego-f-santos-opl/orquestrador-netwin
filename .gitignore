@@ -1,0 +1,12 @@
+logs/
+manifests/backups/
+*.Zone.Identifier
+web/templates/*.Zone.Identifier
+__pycache__/
+*.py[cod]
+*.pyc
+.env
+venv/
+.venv/
+.DS_Store
+Thumbs.db

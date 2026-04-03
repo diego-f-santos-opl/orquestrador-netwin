@@ -1,0 +1,162 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "9"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app.kubernetes.io/app":"netwin-geoserver","app.kubernetes.io/component":"geoserver","app.kubernetes.io/instance":"netwin","app.kubernetes.io/managed-by":"Helm","app.kubernetes.io/name":"geoserver","app.kubernetes.io/version":"1.0.5-r3","helm.sh/chart":"netwin-0.1.0"},"name":"netwin-geoserver","namespace":"netwin"},"spec":{"replicas":2,"selector":{"matchLabels":{"app.kubernetes.io/app":"netwin-geoserver"}},"template":{"metadata":{"labels":{"app.kubernetes.io/app":"netwin-geoserver","app.kubernetes.io/component":"geoserver","app.kubernetes.io/instance":"netwin","app.kubernetes.io/managed-by":"Helm","app.kubernetes.io/name":"geoserver","app.kubernetes.io/version":"1.0.5-r3","helm.sh/chart":"netwin-0.1.0"}},"spec":{"containers":[{"args":["netwin_geoserver"],"envFrom":[{"secretRef":{"name":"netwin-credentials"}}],"image":"acrdevopsfbdev2demo.azurecr.io/netwin/inventory-vtal:1.0.5-r3","imagePullPolicy":"Always","livenessProbe":{"httpGet":{"path":"/health/live","port":14088},"initialDelaySeconds":60,"periodSeconds":60},"name":"netwin-geoserver","ports":[{"containerPort":14080,"name":"http1"},{"containerPort":14000,"name":"debug-port"},{"containerPort":14088,"name":"http-health"},{"containerPort":8887,"name":"prom-metrics"}],"readinessProbe":{"httpGet":{"path":"/health/ready","port":14088},"initialDelaySeconds":60,"periodSeconds":30,"timeoutSeconds":5},"resources":{"limits":{"cpu":"2000m","memory":"2Gi"},"requests":{"cpu":"150m","memory":"1Gi"}},"securityContext":{"runAsNonRoot":true},"volumeMounts":[{"mountPath":"/opt/alticelabs/automation/netwin/inventory/hosts","name":"deploy-conf","subPath":"hosts"},{"mountPath":"/var/log","name":"varlog"}]}],"initContainers":[{"command":["sh","-c","cp -rp /var/log/* /tmp/log"],"image":"acrdevopsfbdev2demo.azurecr.io/netwin/inventory-vtal:1.0.5-r3","imagePullPolicy":"Always","name":"init-log-dir","resources":{"limits":{"cpu":"75m","memory":"100Mi"},"requests":{"cpu":"30m","memory":"100Mi"}},"securityContext":{"runAsNonRoot":true},"volumeMounts":[{"mountPath":"/tmp/log","name":"varlog"}]}],"securityContext":{"runAsGroup":1009,"runAsUser":992},"serviceAccountName":"default","volumes":[{"configMap":{"name":"netwin-deploy-conf"},"name":"deploy-conf"},{"emptyDir":{},"name":"varlog"}]}}}}
+  creationTimestamp: "2025-12-22T15:12:48Z"
+  generation: 28
+  labels:
+    app.kubernetes.io/app: netwin-geoserver
+    app.kubernetes.io/component: geoserver
+    app.kubernetes.io/instance: netwin
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: geoserver
+    app.kubernetes.io/version: 1.0.5-r3
+    helm.sh/chart: netwin-0.1.0
+  name: netwin-geoserver
+  namespace: netwin
+  resourceVersion: "204541937"
+  uid: 57d70a9d-e786-4513-a351-6c3365bae5f2
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/app: netwin-geoserver
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "2026-02-12T16:46:40-03:00"
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/app: netwin-geoserver
+        app.kubernetes.io/component: geoserver
+        app.kubernetes.io/instance: netwin
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: geoserver
+        app.kubernetes.io/version: 1.0.5-r3
+        helm.sh/chart: netwin-0.1.0
+    spec:
+      containers:
+      - args:
+        - netwin_geoserver
+        envFrom:
+        - secretRef:
+            name: netwin-credentials
+        image: ghcr.io/alticelabsprojects/inventory-vtal:1.0.6-r2
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/live
+            port: 14088
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 60
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: netwin-geoserver
+        ports:
+        - containerPort: 14080
+          name: http1
+          protocol: TCP
+        - containerPort: 14000
+          name: debug-port
+          protocol: TCP
+        - containerPort: 14088
+          name: http-health
+          protocol: TCP
+        - containerPort: 8887
+          name: prom-metrics
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/ready
+            port: 14088
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: "2"
+            memory: 2Gi
+          requests:
+            cpu: 150m
+            memory: 1Gi
+        securityContext:
+          runAsNonRoot: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/alticelabs/automation/netwin/inventory/hosts
+          name: deploy-conf
+          subPath: hosts
+        - mountPath: /var/log
+          name: varlog
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: acr-secret
+      - name: ghcr-secret
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - cp -rp /var/log/* /tmp/log
+        image: acrdevopsfbdev2demo.azurecr.io/netwin/inventory-vtal:1.0.5-r3
+        imagePullPolicy: Always
+        name: init-log-dir
+        resources:
+          limits:
+            cpu: 75m
+            memory: 100Mi
+          requests:
+            cpu: 30m
+            memory: 100Mi
+        securityContext:
+          runAsNonRoot: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /tmp/log
+          name: varlog
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsGroup: 1009
+        runAsUser: 992
+      serviceAccount: default
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: netwin-deploy-conf
+        name: deploy-conf
+      - emptyDir: {}
+        name: varlog
+status:
+  conditions:
+  - lastTransitionTime: "2026-03-25T03:59:39Z"
+    lastUpdateTime: "2026-03-25T03:59:39Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2025-12-22T15:12:48Z"
+    lastUpdateTime: "2026-03-25T03:59:39Z"
+    message: ReplicaSet "netwin-geoserver-cccb79758" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  observedGeneration: 28

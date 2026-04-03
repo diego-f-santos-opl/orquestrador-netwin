@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Netwin — Orquestrador de Deploy</title>
+<style>
+  :root {
+    --bg:       #0d1117;
+    --bg2:      #161b22;
+    --bg3:      #21262d;
+    --border:   #30363d;
+    --text:     #e6edf3;
+    --muted:    #8b949e;
+    --cyan:     #58a6ff;
+    --green:    #3fb950;
+    --yellow:   #d29922;
+    --red:      #f85149;
+    --purple:   #bc8cff;
+    --orange:   #ffa657;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar { background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .sidebar-header { padding: 20px 16px; border-bottom: 1px solid var(--border); }
+  .sidebar-title { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: 0.5px; }
+  .sidebar-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .sidebar-section { padding: 12px 8px 4px; font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .env-list { padding: 0 8px; }
+  .env-item { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s; margin-bottom: 2px; }
+  .env-item:hover { background: var(--bg3); }
+  .env-item.active { background: var(--bg3); border: 1px solid var(--border); }
+  .env-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .env-dot.ok { background: var(--green); }
+  .env-dot.warn { background: var(--yellow); }
+  .env-name { font-size: 13px; font-weight: 500; }
+  .env-ns { font-size: 10px; color: var(--muted); }
+
+  .nav-list { padding: 0 8px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 6px; cursor: pointer; color: var(--muted); transition: all 0.15s; margin-bottom: 1px; font-size: 13px; }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: var(--bg3); color: var(--cyan); }
+  .nav-icon { font-size: 14px; width: 18px; text-align: center; }
+
+  /* Main */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; border-bottom: 1px solid var(--border); background: var(--bg2); }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-title { font-size: 15px; font-weight: 600; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+  .badge-cyan  { background: #58a6ff22; color: var(--cyan);   border: 1px solid #58a6ff44; }
+  .badge-green { background: #3fb95022; color: var(--green);  border: 1px solid #3fb95044; }
+  .badge-yellow{ background: #d2992222; color: var(--yellow); border: 1px solid #d2992244; }
+  .badge-red   { background: #f8514922; color: var(--red);    border: 1px solid #f8514944; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+  .btn-refresh { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; transition: all 0.15s; }
+  .btn-refresh:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* Content */
+  .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+  /* Cards de status */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .stat-value { font-size: 24px; font-weight: 700; }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* Seções */
+  .section { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .section-title { font-size: 13px; font-weight: 600; }
+  .section-body { padding: 0; }
+
+  /* Tabela de deployments */
+  .deploy-table { width: 100%; border-collapse: collapse; }
+  .deploy-table th { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+  .deploy-table td { padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .deploy-table tr:last-child td { border-bottom: none; }
+  .deploy-table tr:hover td { background: var(--bg3); }
+  .status-dot { display: inline-flex; align-items: center; gap: 6px; }
+  .status-dot::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+  .status-dot.ok::before     { background: var(--green); }
+  .status-dot.pending::before{ background: var(--yellow); }
+  .status-dot.stopped::before{ background: var(--muted); }
+
+  /* Ações */
+  .actions-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 16px; }
+  .action-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 14px; cursor: pointer; transition: all 0.15s; }
+  .action-card:hover { border-color: var(--cyan); transform: translateY(-1px); }
+  .action-card.danger:hover { border-color: var(--red); }
+  .action-card.success:hover { border-color: var(--green); }
+  .action-card.warning:hover { border-color: var(--yellow); }
+  .action-card.purple:hover  { border-color: var(--purple); }
+  .action-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .action-icon { font-size: 18px; }
+  .action-name { font-size: 14px; font-weight: 600; }
+  .action-desc { font-size: 12px; color: var(--muted); }
+
+  /* Terminal */
+  .terminal { background: #010409; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 16px; display: none; }
+  .terminal.active { display: block; }
+  .terminal-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+  .terminal-title { font-size: 12px; color: var(--muted); font-family: monospace; }
+  .terminal-close { cursor: pointer; color: var(--muted); font-size: 16px; }
+  .terminal-body { padding: 14px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.6; max-height: 400px; overflow-y: auto; color: #c9d1d9; }
+  .terminal-body .log-ok   { color: var(--green); }
+  .terminal-body .log-err  { color: var(--red); }
+  .terminal-body .log-warn { color: var(--yellow); }
+  .terminal-body .log-info { color: var(--cyan); }
+  .terminal-cursor { display: inline-block; width: 8px; height: 14px; background: var(--cyan); vertical-align: middle; animation: blink 1s step-end infinite; margin-left: 2px; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* Modal */
+  .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+  .modal-backdrop.active { display: flex; }
+  .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; min-width: 400px; max-width: 500px; }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  .modal-field { margin-bottom: 14px; }
+  .modal-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: block; }
+  .modal-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: var(--text); font-size: 13px; outline: none; }
+  .modal-input:focus { border-color: var(--cyan); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+  .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; }
+  .btn-cancel { background: transparent; color: var(--muted); }
+  .btn-cancel:hover { background: var(--bg3); }
+  .btn-primary { background: var(--cyan); color: #0d1117; border-color: var(--cyan); }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
+  .btn-danger:hover { opacity: 0.85; }
+
+  /* Loading spinner */
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Views */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* Timestamp */
+  #last-update { font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">NETWIN</div>
+      <div class="sidebar-sub">Orquestrador de Deploy</div>
+    </div>
+
+    <div class="sidebar-section">Ambientes</div>
+    <div class="env-list" id="env-list"></div>
+
+    <div class="sidebar-section" style="margin-top:8px">Menu</div>
+    <nav class="nav-list">
+      <div class="nav-item active" data-view="dashboard" onclick="setView('dashboard', this)">
+        <span class="nav-icon">◈</span> Dashboard
+      </div>
+      <div class="nav-item" data-view="actions" onclick="setView('actions', this)">
+        <span class="nav-icon">▶</span> Acoes
+      </div>
+      <div class="nav-item" data-view="deployments" onclick="setView('deployments', this)">
+        <span class="nav-icon">⬡</span> Deployments
+      </div>
+      <div class="nav-item" data-view="logs" onclick="setView('logs', this)">
+        <span class="nav-icon">~</span> Logs
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title" id="topbar-title">Selecione um ambiente</span>
+        <span class="badge badge-cyan" id="badge-version" style="display:none"></span>
+        <span class="badge badge-green" id="badge-env" style="display:none"></span>
+        <span class="badge badge-yellow" id="badge-ns" style="display:none"></span>
+      </div>
+      <div class="topbar-right">
+        <span id="last-update"></span>
+        <button class="btn-refresh" onclick="refreshStatus()">
+          <span id="refresh-icon">↻</span> Atualizar
+        </button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- Terminal de output -->
+      <div class="terminal" id="terminal">
+        <div class="terminal-header">
+          <span class="terminal-title" id="terminal-title">output</span>
+          <span class="terminal-close" onclick="closeTerminal()">×</span>
+        </div>
+        <div class="terminal-body" id="terminal-body"></div>
+      </div>
+
+      <!-- Dashboard -->
+      <div class="view active" id="view-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Pods</div>
+            <div class="stat-value" id="stat-pods">—</div>
+            <div class="stat-sub">no namespace</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Rodando</div>
+            <div class="stat-value" style="color:var(--green)" id="stat-running">—</div>
+            <div class="stat-sub">pods ativos</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Deployments</div>
+            <div class="stat-value" id="stat-deploys">—</div>
+            <div class="stat-sub">no cluster</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Parados</div>
+            <div class="stat-value" style="color:var(--muted)" id="stat-stopped">—</div>
+            <div class="stat-sub">scale 0</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Deployments</span>
+            <span class="badge badge-cyan" id="deploy-count"></span>
+          </div>
+          <div class="section-body">
+            <table class="deploy-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Desejado</th>
+                  <th>Pronto</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="deploy-tbody">
+                <tr><td colspan="4" style="color:var(--muted);padding:24px;text-align:center">Selecione um ambiente para ver os deployments</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acoes -->
+      <div class="view" id="view-actions">
+        <div class="section">
+          <div class="section-header"><span class="section-title">Ambiente</span></div>
+          <div class="actions-grid">
+            <div class="action-card success" onclick="runAction('startup')">
+              <div class="action-top"><span class="action-icon">⬆</span><span class="action-name">Startup</span></div>
+              <div class="action-desc">Sobe componentes na ordem correta</div>
+            </div>
+            <div class="action-card danger" onclick="runAction('shutdown')">
+              <div class="action-top"><span class="action-icon">⬇</span><span class="action-name">Shutdown</span></div>
+              <div class="action-desc">Escala todos os deployments para 0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">Manifests</span></div>
+          <div class="actions-grid">
+            <div class="action-card" onclick="runAction('validate')">
+              <div class="action-top"><span class="action-icon">✓</span><span class="action-name">Validate</span></div>
+              <div class="action-desc">Valida ambiente antes do deploy</div>
+            </div>
+            <div class="action-card" onclick="runAction('clean')">
+              <div class="action-top"><span class="action-icon">◈</span><span class="action-name">Clean</span></div>
+              <div class="action-desc">Limpa yamls exportados do cluster</div>
+            </div>
+            <div class="action-card warning" onclick="showUpdateModal()">
+              <div class="action-top"><span class="action-icon">↑</span><span class="action-name">Update</span></div>
+              <div class="action-desc">Atualiza versao nos manifests</div>
+            </div>
+            <div class="action-card" onclick="runAction('deploy')">
+              <div class="action-top"><span class="action-icon">▶</span><span class="action-name">Deploy</span></div>
+              <div class="action-desc">Aplica manifests no cluster</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">Job</span></div>
+          <div class="actions-grid">
+            <div class="action-card purple" onclick="showMigrateModal()">
+              <div class="action-top"><span class="action-icon">⟳</span><span class="action-name">Migrate</span></div>
+              <div class="action-desc">Atualiza e executa job de migrate</div>
+            </div>
+            <div class="action-card" onclick="runAction('validate-migrate')">
+              <div class="action-top"><span class="action-icon">?</span><span class="action-name">Val. Migrate</span></div>
+              <div class="action-desc">Valida execucao no banco Oracle</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">Monitoramento</span></div>
+          <div class="actions-grid">
+            <div class="action-card" onclick="runAction('rollout-status')">
+              <div class="action-top"><span class="action-icon">◎</span><span class="action-name">Rollout Status</span></div>
+              <div class="action-desc">Ver status de todos os deployments</div>
+            </div>
+            <div class="action-card" onclick="runAction('export')">
+              <div class="action-top"><span class="action-icon">^</span><span class="action-name">Export</span></div>
+              <div class="action-desc">Exporta yamls do cluster</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Deployments -->
+      <div class="view" id="view-deployments">
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Todos os Deployments</span>
+          </div>
+          <div class="section-body">
+            <table class="deploy-table">
+              <thead>
+                <tr>
+                  <th>Nome</th><th>Desejado</th><th>Pronto</th><th>Atualizado</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="deploys-tbody-full">
+                <tr><td colspan="5" style="color:var(--muted);padding:24px;text-align:center">Selecione um ambiente</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs -->
+      <div class="view" id="view-logs">
+        <div class="section">
+          <div class="section-header"><span class="section-title">Logs dos Pods</span></div>
+          <div class="section-body" style="padding:16px">
+            <div style="display:flex;gap:8px;margin-bottom:12px">
+              <select class="modal-input" id="log-pod-select" style="flex:1">
+                <option value="">Selecione um pod...</option>
+              </select>
+              <select class="modal-input" id="log-lines" style="width:120px">
+                <option value="50">50 linhas</option>
+                <option value="100" selected>100 linhas</option>
+                <option value="200">200 linhas</option>
+              </select>
+              <button class="btn btn-primary" onclick="loadPodLogs()">Ver Logs</button>
+            </div>
+            <div class="terminal active" style="margin-bottom:0">
+              <div class="terminal-body" id="pod-logs-body" style="min-height:200px">
+                <span style="color:var(--muted)">Selecione um pod para ver os logs...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Modal Update Version -->
+<div class="modal-backdrop" id="modal-update">
+  <div class="modal">
+    <div class="modal-title">Atualizar Versao</div>
+    <div class="modal-field">
+      <label class="modal-label">Nova versao (ex: 1.0.6-r2)</label>
+      <input class="modal-input" id="input-version" placeholder="1.0.6-r2">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal('modal-update')">Cancelar</button>
+      <button class="btn btn-primary" onclick="runUpdate()">Atualizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Migrate -->
+<div class="modal-backdrop" id="modal-migrate">
+  <div class="modal">
+    <div class="modal-title">Job de Migrate</div>
+    <div class="modal-field">
+      <label class="modal-label">Nova versao (ex: 1.0.6-r2)</label>
+      <input class="modal-input" id="input-migrate-version" placeholder="1.0.6-r2">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal('modal-migrate')">Cancelar</button>
+      <button class="btn btn-primary" onclick="runMigrate()">Executar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let activeEnv   = null;
+  let refreshTimer = null;
+
+  // ==================================================
+  // Init
+  // ==================================================
+  async function init() {
+    const res  = await fetch('/api/environments');
+    const envs = await res.json();
+    renderEnvList(envs);
+    if (envs.length > 0) selectEnv(envs[0]);
+  }
+
+  function renderEnvList(envs) {
+    const el = document.getElementById('env-list');
+    el.innerHTML = envs.map((e, i) => {
+      const dbOk = e.database && e.database.host;
+      return `<div class="env-item ${i===0?'active':''}" onclick="selectEnv(${JSON.stringify(e).replace(/"/g,'&quot;')}, this)">
+        <div class="env-dot ${dbOk?'ok':'warn'}"></div>
+        <div>
+          <div class="env-name">${e.label || e.name}</div>
+          <div class="env-ns">${e.namespace || ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function selectEnv(env, el) {
+    activeEnv = env;
+    document.querySelectorAll('.env-item').forEach(e => e.classList.remove('active'));
+    if (el) el.classList.add('active');
+    document.getElementById('topbar-title').textContent = env.label || env.name;
+    document.getElementById('badge-env').textContent    = env.label || env.name;
+    document.getElementById('badge-ns').textContent     = env.namespace;
+    document.getElementById('badge-env').style.display  = 'inline';
+    document.getElementById('badge-ns').style.display   = 'inline';
+    refreshStatus();
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(refreshStatus, 30000);
+  }
+
+  // ==================================================
+  // Status
+  // ==================================================
+  async function refreshStatus() {
+    if (!activeEnv) return;
+    const icon = document.getElementById('refresh-icon');
+    icon.innerHTML = '<span class="spinner"></span>';
+
+    try {
+      const res  = await fetch(`/api/status/${activeEnv.name}`);
+      const data = await res.json();
+
+      document.getElementById('badge-version').textContent    = `v${data.version}`;
+      document.getElementById('badge-version').style.display  = 'inline';
+
+      const running = data.pods.filter(p => p.phase === 'Running').length;
+      const stopped = data.deployments.filter(d => d.status === 'stopped').length;
+
+      document.getElementById('stat-pods').textContent    = data.pods.length;
+      document.getElementById('stat-running').textContent = running;
+      document.getElementById('stat-deploys').textContent = data.deployments.length;
+      document.getElementById('stat-stopped').textContent = stopped;
+      document.getElementById('deploy-count').textContent = data.deployments.length;
+
+      renderDeployments(data.deployments);
+      renderPodSelect(data.pods);
+
+      const ts = new Date(data.timestamp);
+      document.getElementById('last-update').textContent = `Atualizado ${ts.toLocaleTimeString('pt-BR')}`;
+    } catch(e) {
+      console.error(e);
+    }
+    icon.innerHTML = '↻';
+  }
+
+  function renderDeployments(deploys) {
+    const rows = deploys.map(d => `
+      <tr>
+        <td style="font-family:monospace;font-size:12px">${d.name}</td>
+        <td>${d.desired}</td>
+        <td>${d.ready || '0'}</td>
+        <td><span class="status-dot ${d.status}">${d.status === 'ok' ? 'OK' : d.status === 'stopped' ? 'Parado' : 'Pendente'}</span></td>
+      </tr>`).join('');
+
+    document.getElementById('deploy-tbody').innerHTML      = rows || '<tr><td colspan="4" style="color:var(--muted);padding:16px;text-align:center">Nenhum deployment encontrado</td></tr>';
+    document.getElementById('deploys-tbody-full').innerHTML = deploys.map(d => `
+      <tr>
+        <td style="font-family:monospace;font-size:12px">${d.name}</td>
+        <td>${d.desired}</td><td>${d.ready||'0'}</td><td>${d.updated||'0'}</td>
+        <td><span class="status-dot ${d.status}">${d.status==='ok'?'OK':d.status==='stopped'?'Parado':'Pendente'}</span></td>
+      </tr>`).join('');
+  }
+
+  function renderPodSelect(pods) {
+    const sel = document.getElementById('log-pod-select');
+    sel.innerHTML = '<option value="">Selecione um pod...</option>' +
+      pods.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+  }
+
+  // ==================================================
+  // Views
+  // ==================================================
+  function setView(view, el) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`view-${view}`).classList.add('active');
+    if (el) el.classList.add('active');
+  }
+
+  // ==================================================
+  // Terminal
+  // ==================================================
+  function openTerminal(title) {
+    const t = document.getElementById('terminal');
+    const b = document.getElementById('terminal-body');
+    document.getElementById('terminal-title').textContent = title;
+    b.innerHTML = '';
+    t.classList.add('active');
+    t.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function closeTerminal() {
+    document.getElementById('terminal').classList.remove('active');
+  }
+
+  function appendLog(line) {
+    const b = document.getElementById('terminal-body');
+    const div = document.createElement('div');
+    const clean = line.replace(/\033\[[0-9;]*m/g, '');
+    if (clean.match(/OK|✔|sucesso/i))     div.className = 'log-ok';
+    else if (clean.match(/ERR|✘|FAIL/i))  div.className = 'log-err';
+    else if (clean.match(/WARN|AVS|⚠/i))  div.className = 'log-warn';
+    else if (clean.match(/>>>|INFO|→/i))  div.className = 'log-info';
+    div.textContent = clean;
+    b.appendChild(div);
+    b.scrollTop = b.scrollHeight;
+  }
+
+  // ==================================================
+  // Acoes
+  // ==================================================
+  function getEnvArgs() {
+    if (!activeEnv) return [];
+    return ['--namespace', activeEnv.namespace];
+  }
+
+  async function runAction(action) {
+    if (!activeEnv) { alert('Selecione um ambiente primeiro!'); return; }
+
+    const taskId = `${action}-${Date.now()}`;
+    const scripts = {
+      'startup':          { script: 'startup.py',          args: ['--dir', `manifests/${activeEnv.name}`, ...getEnvArgs(), '--no-wait'] },
+      'shutdown':         { script: 'shutdown.py',          args: ['--all', ...getEnvArgs()] },
+      'validate':         { script: 'validate.py',          args: [...getEnvArgs()] },
+      'clean':            { script: 'clean-manifests.py',   args: [] },
+      'deploy':           { script: 'deploy.py',            args: ['--dir', `manifests/${activeEnv.name}`, ...getEnvArgs()] },
+      'validate-migrate': { script: 'migrate.py',           args: ['--validate-only', ...getEnvArgs()] },
+      'rollout-status':   { script: 'rollout.py',           args: ['--status', ...getEnvArgs()] },
+      'export':           { script: 'rollout.py',           args: ['--status', ...getEnvArgs()] },
+    };
+
+    const cfg = scripts[action];
+    if (!cfg) return;
+
+    openTerminal(action);
+
+    await fetch(`/api/run/${taskId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ script: cfg.script, args: cfg.args })
+    });
+
+    const es = new EventSource(`/api/stream/${taskId}`);
+    es.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'log')  appendLog(msg.data);
+      if (msg.type === 'done') { es.close(); refreshStatus(); }
+    };
+    es.onerror = () => es.close();
+  }
+
+  // Modais
+  function showUpdateModal() { document.getElementById('modal-update').classList.add('active'); }
+  function showMigrateModal() { document.getElementById('modal-migrate').classList.add('active'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+  async function runUpdate() {
+    const version = document.getElementById('input-version').value.trim();
+    if (!version) return;
+    closeModal('modal-update');
+    const taskId = `update-${Date.now()}`;
+    openTerminal(`update-version ${version}`);
+    await fetch(`/api/run/${taskId}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ script: 'update-version.py', args: ['--version', version, '--dir', `manifests/${activeEnv.name}`, ...getEnvArgs()] })
+    });
+    streamTask(taskId);
+  }
+
+  async function runMigrate() {
+    const version = document.getElementById('input-migrate-version').value.trim();
+    if (!version) return;
+    closeModal('modal-migrate');
+    const taskId = `migrate-${Date.now()}`;
+    openTerminal(`migrate ${version}`);
+    await fetch(`/api/run/${taskId}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ script: 'migrate.py', args: ['--version', version, '--validate-only', ...getEnvArgs()] })
+    });
+    streamTask(taskId);
+  }
+
+  function streamTask(taskId) {
+    const es = new EventSource(`/api/stream/${taskId}`);
+    es.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'log')  appendLog(msg.data);
+      if (msg.type === 'done') { es.close(); refreshStatus(); }
+    };
+    es.onerror = () => es.close();
+  }
+
+  // Logs dos pods
+  async function loadPodLogs() {
+    if (!activeEnv) return;
+    const pod   = document.getElementById('log-pod-select').value;
+    const lines = document.getElementById('log-lines').value;
+    if (!pod) return;
+    const el = document.getElementById('pod-logs-body');
+    el.innerHTML = '<span style="color:var(--muted)">Carregando...</span>';
+    const res  = await fetch(`/api/logs/${activeEnv.name}/${pod}?lines=${lines}`);
+    const data = await res.json();
+    el.innerHTML = '';
+    data.logs.split('\n').forEach(line => {
+      const div = document.createElement('div');
+      div.textContent = line;
+      el.appendChild(div);
+    });
+    el.scrollTop = el.scrollHeight;
+  }
+
+  init();
+</script>
+</body>
+</html>
